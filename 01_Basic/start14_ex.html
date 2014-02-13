@@ -1,0 +1,154 @@
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+		<title>	OpenLayers Example</title>
+
+		<style type="text/css">
+			#map {
+				width: 100%; height : 100%; border: 1px solid black;
+			}
+	    </style>
+
+		<!-- OpenLayers 라이브러리 포함 -->
+		<script src="./js/OpenLayers-2.12/lib/OpenLayers.js"></script>
+		<script src="http://maps.google.com/maps/api/js?v=3&amp;sensor=false"></script>
+		<script type="text/javascript">
+			var map; //Map Object
+
+			function init() {
+
+				//----------------------------------------------------------------------------------------------------
+				// 1. Map 기본설정
+				//----------------------------------------------------------------------------------------------------
+
+				var options = {
+					projection: new OpenLayers.Projection("EPSG:900913")
+				}
+
+
+				//Map 객체와 DIV를 연결
+				map = new OpenLayers.Map('map', options);
+
+				//기본적으로 사용할 컨트롤 추가
+				var layerSwitcher = new OpenLayers.Control.LayerSwitcher();
+				var navi = new OpenLayers.Control.Navigation();
+				var mousePosition = new OpenLayers.Control.MousePosition({displayProjection: new OpenLayers.Projection('EPSG:4326')});
+				var scaleLine = new OpenLayers.Control.ScaleLine();
+
+				map.addControls([layerSwitcher, navi, mousePosition, scaleLine]);
+
+
+				//SATELLITE, HYBRID, ROADMAP, TERRAIN
+
+				var hGoogle = new OpenLayers.Layer.Google("Google Satellite", {
+					//type: google.maps.MapTypeId.G_SKY_VISIBLE_MAP,
+					type: google.maps.MapTypeId.SATELLITE,
+					sphericalMercator: true
+				});
+				var sGoogle = new OpenLayers.Layer.Google("Google Hybrid", {
+					type: google.maps.MapTypeId.HYBRID,
+					sphericalMercator: true
+				});
+				var rGoogle = new OpenLayers.Layer.Google("Google Roadmap", {
+					type: google.maps.MapTypeId.ROADMAP,
+					sphericalMercator: true
+				});
+				var tGoogle = new OpenLayers.Layer.Google("Google Terrain", {
+					type: google.maps.MapTypeId.TERRAIN,
+					sphericalMercator: true
+				});
+				map.addLayers([sGoogle, rGoogle, tGoogle, hGoogle]);
+
+
+
+
+				//----------------------------------------------------------------------------------------------------
+				// 2. Layer 추가
+				//----------------------------------------------------------------------------------------------------
+
+				var seoul_sgg = new OpenLayers.Layer.WMS(
+					'시군구', 'http://localhost:8080/geoserver/seoul/wms',
+					{
+						layers: 'seoul:admin_sgg', transparent: 'true', bgColor: '0xFFFFFF', exceptions: 'BLANK'
+					}, {
+						isBaseLayer: false, singleTile: true, wrapDateLine: true
+					}
+				);
+
+				/*
+				var seoul_emd = new OpenLayers.Layer.WMS(
+					'읍면동', 'http://localhost:8080/geoserver/seoul/wms',
+					{
+						layers: 'seoul:admin_emd', transparent: 'true', bgColor: '0xFFFFFF', exceptions: 'BLANK'
+					}, {
+						isBaseLayer: false, singleTile: false, wrapDateLine: true
+					}
+				);
+				*/
+
+				var seoul_river = new OpenLayers.Layer.WMS(
+					'하천', 'http://localhost:8080/geoserver/seoul/wms',
+					{
+						layers: 'seoul:river', transparent: 'true', bgColor: '0xFFFFFF', exceptions: 'BLANK'
+					}, {
+						isBaseLayer: false, singleTile: true, wrapDateLine: true,
+						visibility: false
+					}
+				)
+				//map.addLayers([seoul_sgg, seoul_emd, seoul_river]);
+				map.addLayers([seoul_sgg, seoul_river]);
+
+
+				//사용자스타일 생성
+				var style = new OpenLayers.StyleMap({
+					'default': new OpenLayers.Style({
+						strokeColor: 'red',
+						strokeWidth: 2,
+						strokeOpacity: 1,
+						fillColor: 'green',
+						fillOpacity: 0.7,
+						pointRadius: 5
+					})
+				});
+
+
+				//WFS 레이어 요청
+				var wfsLayer = new OpenLayers.Layer.Vector('WFS Stores', {
+					strategies: [new OpenLayers.Strategy.BBOX()],	
+					protocol: new OpenLayers.Protocol.WFS({
+						url:  'http://localhost:8080/geoserver/seoul/wfs',
+						featureNS: 'http://geoserver.org/seoul',
+						featureType: 'stores',
+						version: '1.1.0',
+						srsName: 'EPSG:900913'
+					}),
+					styleMap: style,
+					visibility: true,
+					projection: 'EPSG:900913'
+				});
+				map.addLayer(wfsLayer);
+
+				map.setCenter(new OpenLayers.LonLat(14139090.751736, 4517288.4919075), 11);
+
+			}
+		</script>
+
+	</head>
+
+	<body onload="init();">
+		<table border="2" cellspacing="5" cellpadding="0" style="border-color: #CCCCFF" width="100%" height="100%">
+			<!--컨트롤 영역-->
+			<tr height="10%"><td align="center">Controls</td></tr>
+			<tr height="70%">
+				<td align="center">
+					<!-- Map영역-->
+					<div id="map"></div>
+				</td>
+			</tr>
+			<!-- 정보영역 -->
+			<tr height="20%">
+				<td align="center"><div id="output">정보</div></td>
+			</tr>
+		</table>
+	</body>
+</html>
