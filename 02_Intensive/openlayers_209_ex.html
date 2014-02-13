@@ -1,0 +1,188 @@
+<!DOCTYPE>
+<html>
+<head>
+	<title>OpenLayers Examples</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+	<!-- Bootstrap 3.0.3 -->
+	<link rel="stylesheet" href="./resources/bootstrap-3.0.3/css/bootstrap.min.css" type="text/css">
+	<script type="text/javascript" src="./resources/bootstrap-3.0.3/js/jquery-1.10.2.min.js"></script>
+	<script type="text/javascript" src="./resources/bootstrap-3.0.3/js/bootstrap.min.js"></script>
+
+	<!-- OpenLayers 2.13.1 -->
+	<link rel="stylesheet" href="./resources/OpenLayers-2.13.1/theme/default/style.css" type="text/css">
+	<script type="text/javascript" src="./resources/OpenLayers-2.13.1/OpenLayers.js"></script>
+
+	<link rel="stylesheet" href="./style.css" type="text/css">
+</head>
+
+<body>
+
+	<div id="wrap">
+		<div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+			<div class="container">
+				<div class="navbar-header">
+					<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+						<span class="sr-only">Toggle navigation</span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+					</button>
+					<a class="navbar-brand" href="#">OpenLayers</a>
+				</div>
+				<div class="navbar-collapse collapse">
+					<form class="navbar-form navbar-right" role="form" action="./index.html">
+						<button type="submit" class="btn btn-success">뒤로 돌아가기</button>
+					</form>
+				</div>
+			</div>
+		</div>
+
+		<!-- Content Layout Start-->
+		<div id="content" class="container">
+			<div id="toolbox"></div>
+			<div id="map"></div>
+			<br>
+			<div>
+				<pre>
+				</pre>
+			</div>
+		</div>
+		<!-- Content Layout Start-->
+	</div>
+
+	<div id="footer">
+		<div class="container">
+			<p class="text-muted text-center">OSGeo Korean Chapter</p>
+		</div>
+	</div>
+
+	<script type="text/javascript">
+		var map = new OpenLayers.Map('map', {
+			projection: new OpenLayers.Projection("EPSG:900913")
+		});
+
+		var osm = new OpenLayers.Layer.OSM();
+		//osm.setOpacity(0.3)
+		map.addLayer(osm);
+
+		map.addControls([new OpenLayers.Control.LayerSwitcher()]);
+
+
+		var wmsEmd = new OpenLayers.Layer.WMS('WMS-EMD : 50만이상', 
+			'http://localhost:8080/geoserver/wms',
+			{
+				version: '1.3.0', 
+				layers: 'admin_emd', 
+				transparent: 'true',
+				CQL_FILTER: new OpenLayers.Filter.Comparison({
+					type: OpenLayers.Filter.Comparison.GREATER_THAN_OR_EQUAL_TO, 
+					property: 'pop2007', 
+					value: '30000'
+				})
+			}, {
+				isBaseLayer: false,
+				singleTile: true
+			}
+		);
+		//wmsEmd.mergeNewParams({cql_filter: "SGG_NM='마포구'"});
+
+		var vlFixed = new OpenLayers.Layer.Vector("WFS-SGG : 중구 FILTER", {
+			protocol: new OpenLayers.Protocol.WFS.v1_1_0({
+				url: "http://localhost:8080/geoserver/seoul/wfs",
+				featureType: "admin_sgg",
+				featureNS: "http://geoserver.org/seoul",
+				featurePrefix: "seoul",
+				geometryName: "the_geom",
+				srsName: "EPSG:900913",
+				filter: new OpenLayers.Filter.Logical({
+					type: OpenLayers.Filter.Logical.OR,
+					filters: [new OpenLayers.Filter.Comparison({
+						type: OpenLayers.Filter.Comparison.EQUAL_TO,
+						property: 'sgg_nm',
+						value: '중구'
+					}), new OpenLayers.Filter.Comparison({
+						type: OpenLayers.Filter.Comparison.EQUAL_TO,
+						property: 'sgg_nm',
+						value: '관악구'
+					}), new OpenLayers.Filter.Comparison({
+						type: OpenLayers.Filter.Comparison.EQUAL_TO,
+						property: 'sgg_nm',
+						value: '강남구'
+					})]
+				})
+			}),
+			strategies: [new OpenLayers.Strategy.Fixed()],
+			isBaseLayer: false
+		});
+
+
+
+		/**
+		 * 2007년 인구(pop2007)가 20,000 이상 또는 2008년 인구(pop2008)가 30,000 이상이며
+		 * 동이름(emd_nm)에 '마' 가 들어가며
+		 * 면적(shape_area)이 1,000,000 미만인 지역은 어디입니까?
+		 */
+		var filterSample = new OpenLayers.Layer.Vector("WFS-SGG Example", {
+			protocol: new OpenLayers.Protocol.WFS.v1_1_0({
+				url: "http://localhost:8080/geoserver/seoul/wfs",
+				featureType: "admin_emd",
+				featureNS: "http://geoserver.org/seoul",
+				featurePrefix: "seoul",
+				geometryName: "the_geom",
+				srsName: "EPSG:900913",
+				filter: new OpenLayers.Filter.Logical({
+					type: OpenLayers.Filter.Logical.AND,
+					filters: [
+						new OpenLayers.Filter.Logical({
+							type: '||',
+							filters: [
+								new OpenLayers.Filter.Comparison({
+									type: OpenLayers.Filter.Comparison.GREATER_THAN_OR_EQUAL_TO,
+									property: 'pop2007',
+									value: '20000'
+								}), new OpenLayers.Filter.Comparison({
+									type: '>=',
+									property: 'pop2008',
+									value: '30000'
+								})
+							]
+						}), new OpenLayers.Filter.Comparison({
+							type: '~',
+							property: 'emd_nm',
+							value: '%마%'
+						}), new OpenLayers.Filter.Comparison({
+							type: '<',
+							property: 'shape_area',
+							value: '1000000'
+						})
+					]
+				})
+			}),
+			strategies: [new OpenLayers.Strategy.Fixed()],
+			isBaseLayer: false
+		});
+
+		map.addLayers([wmsEmd, vlFixed, filterSample]);
+
+		map.setCenter(new OpenLayers.LonLat(14139240.275883, 4518230.959822), 11);
+
+
+
+		//Filter String 형태로 변환
+		var filter1_0_0 = new OpenLayers.Format.Filter({version: "1.0.0"});
+		var filter1_1_0 = new OpenLayers.Format.Filter({version: "1.1.0"});
+		var xml = new OpenLayers.Format.XML();
+		var filter = new OpenLayers.Filter.Comparison({
+			type: OpenLayers.Filter.Comparison.EQUAL_TO,
+			property: 'SGG_NM',
+			value: '중구'
+		});
+		var filter100str = xml.write(filter1_0_0.write(filter));
+		var filter110str = xml.write(filter1_1_0.write(filter));
+
+	</script>
+
+</body>
+
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE>
+<html>
+<head>
+	<title>OpenLayers Examples</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+	<!-- Bootstrap 3.0.3 -->
+	<link rel="stylesheet" href="./resources/bootstrap-3.0.3/css/bootstrap.min.css" type="text/css">
+	<script type="text/javascript" src="./resources/bootstrap-3.0.3/js/jquery-1.10.2.min.js"></script>
+	<script type="text/javascript" src="./resources/bootstrap-3.0.3/js/bootstrap.min.js"></script>
+
+	<!-- OpenLayers 2.13.1 -->
+	<link rel="stylesheet" href="./resources/OpenLayers-2.13.1/theme/default/style.css" type="text/css">
+	<script type="text/javascript" src="./resources/OpenLayers-2.13.1/OpenLayers.js"></script>
+	<script type="text/javascript" src="http://maps.google.com/maps/api/js?v=3&sensor=false"></script>
+
+	<link rel="stylesheet" href="./style.css" type="text/css">
+</head>
+
+<body>
+
+	<div id="wrap">
+		<div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+			<div class="container">
+				<div class="navbar-header">
+					<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+						<span class="sr-only">Toggle navigation</span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+					</button>
+					<a class="navbar-brand" href="#">OpenLayers</a>
+				</div>
+				<div class="navbar-collapse collapse">
+					<form class="navbar-form navbar-right" role="form" action="./index.html">
+						<button type="submit" class="btn btn-success">뒤로 돌아가기</button>
+					</form>
+				</div>
+			</div>
+		</div>
+
+		<!-- Content Layout Start-->
+		<div id="content" class="container">
+			<div id="toolbox"></div>
+			<div id="map"></div>
+			<br>
+			<div>
+				<pre>
+				</pre>
+			</div>
+		</div>
+		<!-- Content Layout Start-->
+	</div>
+
+	<div id="footer">
+		<div class="container">
+			<p class="text-muted text-center">OSGeo Korean Chapter</p>
+		</div>
+	</div>
+
+	<script type="text/javascript">
+		var map = new OpenLayers.Map('map', {
+			projection: new OpenLayers.Projection("EPSG:900913")
+		});
+
+
+
+		/*
+		var jsonRiver = new OpenLayers.Layer.Vector('WFS JSON River', {
+			protocol: new OpenLayers.Protocol.HTTP({
+				url: './data/river_900913.json',
+				format: new OpenLayers.Format.GeoJSON()
+			}),
+			strategies: [new OpenLayers.Strategy.Fixed()],
+			isBaseLayer: true
+		});
+		map.addLayer(jsonRiver);
+		*/
+
+
+		var jsonRiver = new OpenLayers.Layer.Vector("WFS JSON River", {
+			strategies: [new OpenLayers.Strategy.BBOX()],	
+			protocol: new OpenLayers.Protocol.WFS.v1_1_0({
+				url: "http://localhost:8080/geoserver/seoul/wfs",
+				featureType: "river",
+				featureNS: "http://geoserver.org/seoul",
+				featurePrefix: "seoul",
+				geometryName: "the_geom",
+				srsName: "EPSG:900913",
+				outputFormat: 'json'
+			}),
+			isBaseLayer: true
+		});
+		map.addLayer(jsonRiver);
+
+		map.setCenter(new OpenLayers.LonLat(14130368.803289, 4513587.4103542), 14);
+	</script>
+
+</body>
+
+</html>

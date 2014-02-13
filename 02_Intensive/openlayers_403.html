@@ -1,0 +1,343 @@
+<!DOCTYPE>
+<html>
+<head>
+	<title>OpenLayers Examples</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+	<!-- Bootstrap 3.0.3 -->
+	<link rel="stylesheet" href="./resources/bootstrap-3.0.3/css/bootstrap.min.css" type="text/css">
+	<script type="text/javascript" src="./resources/bootstrap-3.0.3/js/jquery-1.10.2.min.js"></script>
+	<script type="text/javascript" src="./resources/bootstrap-3.0.3/js/bootstrap.min.js"></script>
+
+	<!-- OpenLayers 2.13.1 -->
+	<link rel="stylesheet" href="./resources/OpenLayers-2.13.1/theme/default/style.css" type="text/css">
+	<script type="text/javascript" src="./resources/OpenLayers-2.13.1/OpenLayers.js"></script>
+	<script type="text/javascript" src="http://maps.google.com/maps/api/js?v=3&sensor=false"></script>
+
+	<link rel="stylesheet" href="./style.css" type="text/css">
+
+	<style type="text/css">
+		.olControlEditingToolbar .olControlModifyFeatureItemInactive { 
+			background-position: -1px -1px;
+		}
+		.olControlEditingToolbar .olControlModifyFeatureItemActive { 
+			background-position: -1px -24px;
+		}
+		.olControlNavigationHistory {
+			float: left;
+			margin: 5px;
+			margin-left: 0px;
+			cursor: pointer;
+		}
+		#tool-navhistory {
+			right: 0px;
+			height: 32px;
+			width: 70px;
+		}
+
+		.list-inline li {
+			vertical-align: middle;
+		}
+	</style>
+
+</head>
+
+<body>
+
+	<div id="wrap">
+		<div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+			<div class="container">
+				<div class="navbar-header">
+					<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+						<span class="sr-only">Toggle navigation</span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+					</button>
+					<a class="navbar-brand" href="#">OpenLayers</a>
+				</div>
+				<div class="navbar-collapse collapse">
+					<form class="navbar-form navbar-right" role="form" action="./index.html">
+						<button type="submit" class="btn btn-success">뒤로 돌아가기</button>
+					</form>
+				</div>
+			</div>
+		</div>
+
+		<!-- Content Layout Start-->
+		<div id="content" class="container">
+			<div id="toolbox">
+				<ul class="list-inline">
+					<li><div id="tool-edit" class="olControlEditingToolbar"></div></li>
+					<li>|</li>
+					<li>Modify Mode :</li>
+					<li>
+						<select id="modifyFeatureMode" class="form-control" style="width: 120px;" onchange="modifyFeatureMode(this.value)">
+							<option value="1">RESHAPE</option>
+							<option value="2">RESIZE</option>
+							<option value="4">ROTATE</option>
+							<option value="8">DRAG</option>
+						</select>
+					</li>
+					<li>|</li>
+					<li>Snapping Enable : <input type="checkbox" checked="checked" onchange="snapMode(this)" /></li>
+					<li>|</li>
+					<li>Navigation History : </li>
+					<li><div id="tool-navhistory"></div></li>
+					<li><button type="button" class="btn btn-default" onclick="geoLocate();"><span class="glyphicon glyphicon-record"></span>Locate</button></li>
+				</ul>
+			</div>
+			<div id="map"></div>
+			<br>
+			<div id="result"></div>
+		</div>
+		<!-- Content Layout Start-->
+	</div>
+
+	<div id="footer">
+		<div class="container">
+			<p class="text-muted text-center">OSGeo Korean Chapter</p>
+		</div>
+	</div>
+
+	<script type="text/javascript">
+		var map = new OpenLayers.Map('map', {
+			projection: new OpenLayers.Projection("EPSG:900913")
+			//controls: [],
+			//maxExtent: new OpenLayers.Bounds(179101.7691, 436263.7698, 216151.2493, 466550.4063),
+			//projection: 'EPSG:2097',
+			//maxResolution: 100,
+			//units: 'm',
+			//tileSize: new OpenLayers.Size(512, 512)
+		});
+
+		var hGoogle = new OpenLayers.Layer.Google("Google Satellite", {
+			type: google.maps.MapTypeId.SATELLITE,
+			sphericalMercator: true, numZoomLevels: 20
+		});
+		map.addLayer(hGoogle);
+
+		var wmsSgg = new OpenLayers.Layer.WMS('WMS admin_sgg', 
+			'http://localhost:8080/geoserver/wms',
+			{
+				version: '1.3.0', layers: 'admin_sgg', transparent: 'true', srsName: 'EPSG:900913'
+			}, {
+				buffer: 0, isBaseLayer: false, singleTile: false, opacity: 0.5
+			}
+		);
+
+		var wmsEmd = new OpenLayers.Layer.WMS('WMS admin_emd', 
+			'http://localhost:8080/geoserver/wms',
+			{
+				version: '1.3.0', layers: 'admin_emd', transparent: 'true', srsName: 'EPSG:900913'
+			}, {
+				buffer: 0, isBaseLayer: false, singleTile: false, opacity: 0.5, visibility: false
+			}
+		);
+
+		var wmsSid = new OpenLayers.Layer.WMS('WMS admin_sid', 
+			'http://localhost:8080/geoserver/wms',
+			{
+				version: '1.3.0', layers: 'admin_sid', transparent: 'true', srsName: 'EPSG:900913'
+			}, {
+				buffer: 0, isBaseLayer: false, singleTile: false, opacity: 0.5
+			}
+		);
+
+		var wfsRiver = new OpenLayers.Layer.Vector('WFS river', {
+			strategies: [new OpenLayers.Strategy.BBOX()],	
+			protocol: new OpenLayers.Protocol.WFS({
+				url:  'http://localhost:8080/geoserver/seoul/wfs',
+				featureType: 'river',
+				featureNS: 'http://geoserver.org/seoul',
+				srsName: 'EPSG:900913',
+				version: '1.1.0',
+				outputFormat: 'json'
+			})	
+		});
+
+
+		map.addLayers([wmsSgg, wmsEmd, wmsSid, wfsRiver]);
+		map.zoomToMaxExtent();
+
+		//Add to Controls
+		map.addControl( new OpenLayers.Control.LayerSwitcher({'ascending': true}) );
+		map.addControl( new OpenLayers.Control.MousePosition() );
+		map.addControl( new OpenLayers.Control.Scale() );
+		map.addControl( new OpenLayers.Control.ScaleLine() );
+
+		
+		//Add to VectorLayer
+		var editVector = new OpenLayers.Layer.Vector('Edit Vector');
+		map.addLayer(editVector);
+
+
+
+		//map.addControl( new OpenLayers.Control.EditingToolbar(editVector) );
+		//map.addControl( new OpenLayers.Control.EditingToolbar(editVector, {div: document.getElementById("tool-edit")}) );
+
+
+
+		/**
+		 * Snapping 활성화
+		 */
+		var snap = new OpenLayers.Control.Snapping({
+			layer: editVector,
+			targets: [wfsRiver, editVector],
+			greedy: false
+		});
+		snap.activate();
+
+		/**
+		 * Adding a Panel
+		 */
+		var panel = new OpenLayers.Control.Panel({
+			div: document.getElementById("tool-edit"),
+			displayClass: 'olControlEditingToolbar'
+		});
+
+		/**
+		 * Adding a ModifyFeature Control
+		 */
+		var ctrModifyFeature = new OpenLayers.Control.ModifyFeature( editVector, {
+			displayClass: 'olControlModifyFeature', 
+			title: '수정'
+		});
+
+		/**
+		 * Adding a Polygon DrawFeature Control
+		 */
+		var ctrDrawFeaturePolygon = new OpenLayers.Control.DrawFeature( editVector, //layer
+			OpenLayers.Handler.Polygon, //handler
+			{
+				//options
+				displayClass: 'olControlDrawFeaturePolygon',
+				title: '폴리곤 추가',
+				handlerOptions: {holeModifier: 'altKey'}
+			}
+		);
+
+		/**
+		 * Adding a Path(Line) DrawFeature Control
+		 */
+		var ctrDrawFeaturePath = new OpenLayers.Control.DrawFeature(
+			editVector, OpenLayers.Handler.Path,
+			{displayClass: 'olControlDrawFeaturePath', title: '라인 추가'}
+		);
+
+		/**
+		 * Adding a Point DrawFeature Control
+		 */
+		var ctrDrawFeaturePoint = new OpenLayers.Control.DrawFeature(
+			editVector, OpenLayers.Handler.Point,
+			{displayClass: 'olControlDrawFeaturePoint', title: '포인트 추가'}
+		);
+
+		/**
+		 * Adding a Navigation Control
+		 */
+		var ctrNavigation = new OpenLayers.Control.Navigation({title: '이동'});
+
+		panel.addControls([
+			ctrModifyFeature,
+			ctrDrawFeaturePolygon, ctrDrawFeaturePath, ctrDrawFeaturePoint,
+			ctrNavigation
+		]);
+		map.addControl( panel );
+
+
+		/**
+		 * Adding a Geolocate Control
+		 */
+		var geolocVector = new OpenLayers.Layer.Vector('Geolocate Vector');
+		map.addLayer(geolocVector);
+
+		var geolocate = new OpenLayers.Control.Geolocate({
+			bind: false,
+			geolocationOptions: {
+				enableHighAccuracy: false,
+				maximumAge: 0,
+				timeout: 7000
+			}
+		});
+		map.addControl(geolocate);
+		geolocate.events.register('locationupdated', geolocate, function(evt) {
+			geolocVector.removeAllFeatures();
+			geolocVector.addFeatures([
+				new OpenLayers.Feature.Vector(
+					OpenLayers.Geometry.Polygon.createRegularPolygon(
+						//center of polygon
+						new OpenLayers.Geometry.Point(evt.point.x, evt.point.y),
+						//distance to vertex
+						evt.position.coords.accuracy/2,
+						//Number of sides. 20 approximates a circle
+						40,	
+						//original angle of rotation
+						0
+					)
+				)
+			]);
+			map.zoomToExtent(geolocVector.getDataExtent());
+		});
+
+
+		/**
+		 * Adding a NavigationHistory Control
+		 */
+		var navHistory = new OpenLayers.Control.NavigationHistory({
+			previousOptions: {title: '이전보기'},
+			nextOptions: {title: '이후보기'}
+		});
+		map.addControl( navHistory );
+
+		var panelNaviHistory = new OpenLayers.Control.Panel({
+			div: document.getElementById("tool-navhistory")
+		});
+		panelNaviHistory.addControls([
+			navHistory.next, navHistory.previous
+		]);
+		map.addControl( panelNaviHistory );
+
+
+		map.zoomToExtent( new OpenLayers.Bounds(14092937.934, 4499051.732, 14180076.146, 4537270.246) );
+
+
+
+
+		/**
+		 * OpenLayers.Control.ModifyFeature
+		 *     RESHAPE : 1, RESIZE : 2, ROTATE : 4, DRAG : 8
+		 */
+		function modifyFeatureMode(mode) {
+			if (mode==1 || mode==2 || mode==4 || mode==8) {
+				//map.getControlsByClass('OpenLayers.Control.ModifyFeature')[0];
+				ctrModifyFeature.deactivate();
+				ctrModifyFeature.mode = mode;
+				ctrModifyFeature.activate();
+			}
+		}
+
+		/**
+		 * Snapping 
+		 */
+		function snapMode(mode) {
+			if (mode.checked) {
+				snap.activate();
+			} else {
+				snap.deactivate();
+			}
+		}
+
+		/**
+		 * Geolocate
+		 */
+		function geoLocate() {
+			geolocate.deactivate();
+			geolocate.activate();
+		}
+
+	</script>
+
+</body>
+
+</html>

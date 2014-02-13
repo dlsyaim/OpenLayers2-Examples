@@ -1,0 +1,223 @@
+<!DOCTYPE>
+<html>
+<head>
+	<title>OpenLayers Examples</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+	<!-- Bootstrap 3.0.3 -->
+	<link rel="stylesheet" href="./resources/bootstrap-3.0.3/css/bootstrap.min.css" type="text/css">
+	<script type="text/javascript" src="./resources/bootstrap-3.0.3/js/jquery-1.10.2.min.js"></script>
+	<script type="text/javascript" src="./resources/bootstrap-3.0.3/js/bootstrap.min.js"></script>
+
+	<!-- OpenLayers 2.13.1 -->
+	<link rel="stylesheet" href="./resources/OpenLayers-2.13.1/theme/default/style.css" type="text/css">
+	<script type="text/javascript" src="./resources/OpenLayers-2.13.1/OpenLayers.js"></script>
+
+	<!-- Proj4js 1.1.0 -->
+	<script type="text/javascript" src="./resources/proj4js-1.1.0/lib/proj4js-compressed.js"></script>
+	<script type="text/javascript" src="http://spatialreference.org/ref/epsg/4326/proj4js/"></script>
+	<script type="text/javascript" src="http://spatialreference.org/ref/epsg/2097/proj4js/"></script>
+
+	<link rel="stylesheet" href="./style.css" type="text/css">
+
+	<style type="text/css">
+		/*LayerSwitcher*/
+		.olControlLayerSwitcher {
+
+		}
+		.olControlMousePosition {
+			bottom: 10px;
+		}
+		.olControlOverviewMap {
+			bottom: 90px;
+		}
+	</style>
+
+</head>
+
+<body>
+
+	<div id="wrap">
+		<div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+			<div class="container">
+				<div class="navbar-header">
+					<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+						<span class="sr-only">Toggle navigation</span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+					</button>
+					<a class="navbar-brand" href="#">OpenLayers</a>
+				</div>
+				<div class="navbar-collapse collapse">
+					<form class="navbar-form navbar-right" role="form" action="./index.html">
+						<button type="submit" class="btn btn-success">뒤로 돌아가기</button>
+					</form>
+				</div>
+			</div>
+		</div>
+
+		<!-- Content Layout Start-->
+		<div id="content" class="container">
+			<div id="toolbox">
+			</div>
+			<div id="map"></div>
+			<br>
+			<div id="result">
+				<div id="result-scale" class="well well-sm"></div>
+				<div id="result-mouseposition" class="well well-sm"></div>
+			</div>
+		</div>
+		<!-- Content Layout Start-->
+	</div>
+
+	<div id="footer">
+		<div class="container">
+			<p class="text-muted text-center">OSGeo Korean Chapter</p>
+		</div>
+	</div>
+
+	<script type="text/javascript">
+		var map = new OpenLayers.Map('map', {
+			controls: [],
+			maxExtent: new OpenLayers.Bounds(179101.7691, 436263.7698, 216151.2493, 466550.4063),
+			projection: 'EPSG:2097',
+			displayProjection: 'EPSG:4326',
+			maxResolution: 'auto',
+			units: 'm',
+			tileSize: new OpenLayers.Size(512, 512)
+		});
+
+		/*
+		var rGoogle = new OpenLayers.Layer.Google('Google RoadMap', {
+			type: google.maps.MapTypeId.ROADMAP
+		});
+		map.addLayer(rGoogle);
+		*/
+
+		var wmsLayer = new OpenLayers.Layer.WMS('WMS admin_emd', 
+			'http://localhost:8080/geoserver/wms',
+			{
+				version: '1.3.0',
+				layers: 'admin_emd,admin_sgg',
+				transparent: 'true'
+			}, {
+				buffer: 0,
+				isBaseLayer: true,
+				singleTile: false,
+				opacity: 1
+				//yx : {'EPSG:2097' : false}
+				//,wrapDateLine: true
+			}
+		);
+
+		var wmsLayer2 = new OpenLayers.Layer.WMS('WMS river', 
+			'http://localhost:8080/geoserver/wms',
+			{
+				version: '1.3.0',
+				layers: 'river',
+				transparent: 'true'
+			}, {
+				isBaseLayer: false,
+				singleTile: false
+			}
+		);
+
+		var vectorLayer = new OpenLayers.Layer.Vector('WFS Stores', {
+			strategies: [new OpenLayers.Strategy.BBOX()],	
+			protocol: new OpenLayers.Protocol.WFS({
+				url:  'http://localhost:8080/geoserver/seoul/wfs',
+				featureType: 'stores',
+				featureNS: 'http://geoserver.org/seoul',
+				srsName: 'EPSG:2097',
+				version: '1.1.0',
+				outputFormat: 'json'
+			}),
+			visibility: false,
+			attribution: '-데이터정보 : 서울시 읍면동<br>-좌표계정보 : Bassel 중부원점(EPSG:2097)'
+		});
+
+		map.addLayers([wmsLayer, wmsLayer2, vectorLayer]);
+
+		map.zoomToMaxExtent();
+
+
+		//Add to Controls
+		/**
+		 * 확대, 축소, 전체보기, 상하좌우 이동 및 슬라이더 컨트롤
+		 */
+		map.addControl(new OpenLayers.Control.PanZoomBar({
+			zoomWorldIcon: true, 
+			panIcons: true
+		}));
+
+		/**
+		 * 키보드 버튼으로 지도의 확대, 축소, 위치이동
+		 *     - +/-, Page Up/Page Down/Home/End
+		 */
+		map.addControl( new OpenLayers.Control.KeyboardDefaults() );
+
+		/**
+		 * 드래그. 더블클릭, 마우스 휠을 이용한 컨트롤
+		 */
+		map.addControl( new OpenLayers.Control.Navigation() );
+
+		/**
+		 * 레이어 ON/OFF 변경이 가능한 컨트롤러 추가 - Base Layers, Overlays 구분이 가능
+		 */
+		map.addControl( new OpenLayers.Control.LayerSwitcher({'ascending': true}) );
+
+		/**
+		 * 지도 위 마우스 포인트가 위치한 실제 좌표 정보를 조회
+		 */
+		map.addControl( new OpenLayers.Control.MousePosition({
+			div: document.getElementById("result-mouseposition"),
+			numDigits: 3, displayProjection: new OpenLayers.Projection("EPSG:4326"),
+			prefix: 'MousePosition <a target="_blank" href="http://spatialreference.org/ref/epsg/4326/">(EPSG:4326)</a> = '
+		}) );
+
+		/**
+		 * 메인맵에서 확대된 위치정보를 제공하는 미니맵 생성
+		 */
+		map.addControl( new OpenLayers.Control.OverviewMap({
+			size: new OpenLayers.Size(100,100),
+			layers: [ map.layers[1].clone(),map.layers[0].clone() ],
+			maximized: true, minRectSize: 50
+		}) );
+
+		/**
+		 * 지도 축척 보기
+		 */
+		map.addControl( new OpenLayers.Control.Scale(
+			document.getElementById("result-scale")
+		) );
+
+		/**
+		 * 지도 축척선 생성
+		 */
+		map.addControl( new OpenLayers.Control.ScaleLine() );
+
+		/**
+		 * 지도위에 경위도 격자선 생성
+		 */
+		//map.addControl( new OpenLayers.Control.Graticule() );
+
+		/**
+		 * 퍼머링크(Permalink) 생성
+		 *     - zoom, lat, lon, layers 파라메터 생성
+		 */
+		map.addControl( new OpenLayers.Control.Permalink());
+
+		/**
+		 * 지도내에 레이어에 대한 정보를 표시
+		 *     - attribution option으로 레이어별로 설정이 가능함
+		 */
+		map.addControl( new OpenLayers.Control.Attribution({
+			template: '- 데이터정보 : 서울시 시군구, 읍면동<br>- 좌표계정보 : Bassel 중부원점(EPSG:2097)'
+		}) );
+	</script>
+
+
+</body>
+
+</html>
