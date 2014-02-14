@@ -1,5 +1,10 @@
-﻿OpenLayers.Control.DeleteFeature = OpenLayers.Class(OpenLayers.Control, {
+/**
+ * OpenLayers DeleteFeature Controls
+ */
+OpenLayers.Control.DeleteFeature = OpenLayers.Class(OpenLayers.Control, {
+	
 	layer: null,
+	
 	initialize: function( layer, options ) {
 		OpenLayers.Control.prototype.initialize.apply(this, [options]);
 		this.layer = layer;
@@ -7,6 +12,7 @@
 			this, this.layer, { click: this.clickFeature }
 		);
 	},
+	
 	clickFeature: function(feature) {
 		if (feature.fid == undefined) {
 			this.layer.destroyFeatures([feature]);
@@ -17,5 +23,6 @@
 			this.layer.drawFeature(feature);
 		}
 	},
+	
 	CLASS_NAME: "OpenLayers.Control.DeleteFeature"
 });
